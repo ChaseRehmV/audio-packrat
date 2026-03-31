@@ -9,12 +9,24 @@ function formatDuration(seconds: number | null | undefined): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+function sanitizeQuery(input: string): string {
+  return input
+    .replace(/[\x00-\x1f\x7f]/g, '')
+    .slice(0, 500)
+}
+
 export function searchYoutube(query: string, offset: number): Promise<SearchResult[]> {
   return new Promise((resolve, reject) => {
-    const count = offset + 20
+    const safeQuery = sanitizeQuery(query)
+    if (!safeQuery) {
+      resolve([])
+      return
+    }
+    const safeOffset = Math.max(0, Math.floor(offset))
+    const count = safeOffset + 20
     const ytDlpPath = getYtDlpPath()
     const args = [
-      `ytsearch${count}:${query}`,
+      `ytsearch${count}:${safeQuery}`,
       '--dump-json',
       '--flat-playlist',
       '--no-download',
@@ -45,7 +57,7 @@ export function searchYoutube(query: string, offset: number): Promise<SearchResu
       try {
         const lines = stdout.trim().split('\n').filter(Boolean)
         // Skip results we already have (offset)
-        const newLines = lines.slice(offset)
+        const newLines = lines.slice(safeOffset)
         const results: SearchResult[] = newLines.map((line) => {
           const json = JSON.parse(line)
           return {

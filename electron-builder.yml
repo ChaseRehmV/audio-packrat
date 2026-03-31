@@ -41,7 +41,7 @@ linux:
   target:
     - AppImage
     - deb
-  maintainer: github.com/chaserehm
+  maintainer: Chase Rehm
   category: Utility
   extraResources:
     - from: resources/bin/linux

@@ -9,6 +9,14 @@ let activeProcess: ChildProcess | null = null
 let activeRequest: DownloadRequest | null = null
 let capturedTitle: string | null = null
 
+function sanitizeMetadata(input: string): string {
+  // Strip characters meaningful to yt-dlp metadata syntax and control chars
+  return input
+    .replace(/[%():\\]/g, '')
+    .replace(/[\x00-\x1f\x7f]/g, '')
+    .slice(0, 255)
+}
+
 function buildArgs(request: DownloadRequest): string[] {
   const args: string[] = [
     '--extract-audio',
@@ -37,10 +45,10 @@ function buildArgs(request: DownloadRequest): string[] {
   if (request.artist || request.album) {
     args.push('--embed-metadata')
     if (request.artist) {
-      args.push('--parse-metadata', `${request.artist}:%(artist)s`)
+      args.push('--parse-metadata', `${sanitizeMetadata(request.artist)}:%(artist)s`)
     }
     if (request.album) {
-      args.push('--parse-metadata', `${request.album}:%(album)s`)
+      args.push('--parse-metadata', `${sanitizeMetadata(request.album)}:%(album)s`)
     }
   }
 

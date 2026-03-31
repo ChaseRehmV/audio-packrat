@@ -4,7 +4,34 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { startDownload, cancelDownload } from './download-service'
 import { getHistory, clearHistory } from './history-service'
 import { searchYoutube } from './search-service'
-import type { DownloadRequest } from '../shared/types'
+import type { AudioFormat, DownloadRequest } from '../shared/types'
+
+const VALID_FORMATS: AudioFormat[] = ['mp3', 'flac', 'wav', 'm4a']
+
+function validateDownloadRequest(request: unknown): DownloadRequest {
+  if (!request || typeof request !== 'object') throw new Error('Invalid request')
+  const r = request as Record<string, unknown>
+  if (typeof r.url !== 'string' || !/^https?:\/\/.+/.test(r.url)) {
+    throw new Error('Invalid URL')
+  }
+  if (typeof r.format !== 'string' || !VALID_FORMATS.includes(r.format as AudioFormat)) {
+    throw new Error('Invalid format')
+  }
+  if (typeof r.outputDir !== 'string' || !r.outputDir) {
+    throw new Error('Invalid output directory')
+  }
+  if (typeof r.embedThumbnail !== 'boolean') {
+    throw new Error('Invalid embedThumbnail')
+  }
+  return {
+    url: r.url,
+    format: r.format as AudioFormat,
+    outputDir: r.outputDir,
+    artist: typeof r.artist === 'string' ? r.artist : undefined,
+    album: typeof r.album === 'string' ? r.album : undefined,
+    embedThumbnail: r.embedThumbnail
+  }
+}
 import icon from '../../resources/icon.png?asset'
 
 let mainWindow: BrowserWindow | null = null
@@ -18,7 +45,8 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: true,
+      contextIsolation: true
     }
   })
 
@@ -39,9 +67,10 @@ function createWindow(): void {
 }
 
 function registerIpcHandlers(): void {
-  ipcMain.handle('start-download', async (_event, request: DownloadRequest) => {
+  ipcMain.handle('start-download', async (_event, request: unknown) => {
     if (!mainWindow) throw new Error('No window available')
-    const downloadId = startDownload(request, mainWindow)
+    const validated = validateDownloadRequest(request)
+    const downloadId = startDownload(validated, mainWindow)
     return { downloadId }
   })
 
@@ -70,8 +99,10 @@ function registerIpcHandlers(): void {
     return app.getPath('downloads')
   })
 
-  ipcMain.handle('search-youtube', async (_event, query: string, offset: number) => {
-    return searchYoutube(query, offset)
+  ipcMain.handle('search-youtube', async (_event, query: unknown, offset: unknown) => {
+    if (typeof query !== 'string' || !query.trim()) throw new Error('Invalid query')
+    const safeOffset = typeof offset === 'number' && offset >= 0 ? Math.floor(offset) : 0
+    return searchYoutube(query, safeOffset)
   })
 }
 

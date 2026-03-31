@@ -1,10 +1,10 @@
 {
   "name": "audio-packrat",
   "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "description": "An Electron app that serves as a GUI wrapper around yt-dlp and ffmpeg",
   "main": "./out/main/index.js",
-  "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "author": "Chase Rehm",
+  "homepage": "",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
